@@ -1,0 +1,41 @@
+name: Convert Uploaded DOCX to HTML
+
+on:
+  workflow_dispatch:
+    inputs:
+      docx_file:
+        description: "Upload a Word document"
+        type: artifact
+        required: true
+
+jobs:
+  convert:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Download uploaded DOCX
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ github.event.inputs.docx_file }}
+          path: input
+
+      - name: Install Mammoth
+        run: npm install -g mammoth
+
+      - name: Convert DOCX to HTML
+        run: |
+          mkdir -p docs
+          DOCX=$(ls input/*.docx)
+          BASENAME=$(basename "$DOCX" .docx)
+          mammoth "$DOCX" --output="docs/$BASENAME.html"
+
+      - name: Commit HTML to repo
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add docs/*.html
+          git commit -m "Converted DOCX to HTML from uploaded file" || echo "No changes"
+          git push
